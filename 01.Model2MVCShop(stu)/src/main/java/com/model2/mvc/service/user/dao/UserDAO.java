@@ -1,0 +1,179 @@
+package com.model2.mvc.service.user.dao;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.util.ArrayList;
+import java.util.HashMap;
+
+import com.model2.mvc.common.SearchVO;
+import com.model2.mvc.common.util.DBUtil;
+import com.model2.mvc.service.user.vo.UserVO;
+
+public class UserDAO {
+
+	public UserDAO() {
+	}
+
+	public void insertUser(UserVO userVO) throws Exception {
+
+		System.out.println("======================================");
+		System.out.println("insertUser()");
+		System.out.println(userVO);
+
+		Connection con = DBUtil.getConnection();
+		System.out.println("1. RDBMS 드라이버 연결 성공 및 계정 접속 성공");
+
+		String sql = "insert into USERS values (?,?,?,'user',?,?,?,?,sysdate)";
+
+		System.out.println("2. 쿼리객체 생성");
+		PreparedStatement stmt = con.prepareStatement(sql);
+		stmt.setString(1, userVO.getUserId());
+		stmt.setString(2, userVO.getUserName());
+		stmt.setString(3, userVO.getPassword());
+		stmt.setString(4, userVO.getSsn());
+		stmt.setString(5, userVO.getPhone());
+		stmt.setString(6, userVO.getAddr());
+		stmt.setString(7, userVO.getEmail());
+
+		System.out.println("3. 쿼리 전송");
+		int result = stmt.executeUpdate();
+
+		if (result == 1) {
+			System.out.println("4. 쿼리 전송 성공");
+		}
+
+		System.out.println("======================================");
+
+		con.close();
+	}
+
+	public UserVO findUser(String userId) throws Exception {
+
+		System.out.println("======================================");
+		System.out.println("findUser()");
+		System.out.println("userId: " + userId);
+
+		Connection con = DBUtil.getConnection();
+		System.out.println("1. RDBMS 드라이버 연결 성공 및 계정 접속 성공");
+
+		String sql = "select * from USERS where USER_ID=?";
+
+		System.out.println("2. 쿼리객체 생성");
+		PreparedStatement stmt = con.prepareStatement(sql);
+		stmt.setString(1, userId);
+
+		System.out.println("3. 쿼리 전송 및 data 가져오기");
+		ResultSet rs = stmt.executeQuery();
+
+		UserVO userVO = null;
+		while (rs.next()) {
+			userVO = new UserVO();
+			userVO.setUserId(rs.getString("USER_ID"));
+			userVO.setUserName(rs.getString("USER_NAME"));
+			userVO.setPassword(rs.getString("PASSWORD"));
+			userVO.setRole(rs.getString("ROLE"));
+			userVO.setSsn(rs.getString("SSN"));
+			userVO.setPhone(rs.getString("CELL_PHONE"));
+			userVO.setAddr(rs.getString("ADDR"));
+			userVO.setEmail(rs.getString("EMAIL"));
+			userVO.setRegDate(rs.getDate("REG_DATE"));
+
+			System.out.println("4. data 가져오기 성공");
+		}
+
+		System.out.println(userVO);
+		
+		System.out.println("======================================");
+
+		con.close();
+
+		return userVO;
+	}
+
+	public HashMap<String, Object> getUserList(SearchVO searchVO) throws Exception {
+
+		Connection con = DBUtil.getConnection();
+
+		String sql = "select * from USERS ";
+		if (searchVO.getSearchCondition() != null) {
+			if (searchVO.getSearchCondition().equals("0")) {
+				sql += " where USER_ID='" + searchVO.getSearchKeyword() + "'";
+			} else if (searchVO.getSearchCondition().equals("1")) {
+				sql += " where USER_NAME='" + searchVO.getSearchKeyword() + "'";
+			}
+		}
+		sql += " order by USER_ID";
+
+		PreparedStatement stmt = con.prepareStatement(sql, ResultSet.TYPE_SCROLL_INSENSITIVE,
+				ResultSet.CONCUR_UPDATABLE);
+		ResultSet rs = stmt.executeQuery();
+
+		rs.last();
+		int total = rs.getRow();
+		System.out.println("로우의 수:" + total);
+
+		HashMap<String, Object> map = new HashMap<String, Object>();
+		map.put("count", new Integer(total));
+
+		rs.absolute(searchVO.getPage() * searchVO.getPageUnit() - searchVO.getPageUnit() + 1);
+		System.out.println("searchVO.getPage():" + searchVO.getPage());
+		System.out.println("searchVO.getPageUnit():" + searchVO.getPageUnit());
+
+		ArrayList<UserVO> list = new ArrayList<UserVO>();
+		if (total > 0) {
+			for (int i = 0; i < searchVO.getPageUnit(); i++) {
+				UserVO vo = new UserVO();
+				vo.setUserId(rs.getString("USER_ID"));
+				vo.setUserName(rs.getString("USER_NAME"));
+				vo.setPassword(rs.getString("PASSWORD"));
+				vo.setRole(rs.getString("ROLE"));
+				vo.setSsn(rs.getString("SSN"));
+				vo.setPhone(rs.getString("CELL_PHONE"));
+				vo.setAddr(rs.getString("ADDR"));
+				vo.setEmail(rs.getString("EMAIL"));
+				vo.setRegDate(rs.getDate("REG_DATE"));
+
+				list.add(vo);
+				if (!rs.next())
+					break;
+			}
+		}
+		System.out.println("list.size() : " + list.size());
+		map.put("list", list);
+		System.out.println("map().size() : " + map.size());
+
+		con.close();
+
+		return map;
+	}
+
+	public void updateUser(UserVO userVO) throws Exception {
+
+		System.out.println("======================================");
+		System.out.println("updateUser()");
+		System.out.println(userVO);
+
+		Connection con = DBUtil.getConnection();
+		System.out.println("1. RDBMS 드라이버 연결 성공 및 계정 접속 성공");
+
+		String sql = "update USERS set USER_NAME=?,CELL_PHONE=?,ADDR=?,EMAIL=? where USER_ID=?";
+
+		System.out.println("2. 쿼리객체 생성");
+		PreparedStatement stmt = con.prepareStatement(sql);
+		stmt.setString(1, userVO.getUserName());
+		stmt.setString(2, userVO.getPhone());
+		stmt.setString(3, userVO.getAddr());
+		stmt.setString(4, userVO.getEmail());
+		stmt.setString(5, userVO.getUserId());
+		
+		System.out.println("3. 쿼리 전송");
+		int result = stmt.executeUpdate();
+
+		if (result == 1) {
+			System.out.println("4. 쿼리 전송 성공");
+		}
+
+		con.close();
+	}
+}
